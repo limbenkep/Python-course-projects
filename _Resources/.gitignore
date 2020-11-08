@@ -1,0 +1,7 @@
+# ignore everything except for stated files and directories in folder
+/*
+!img/
+!styles/
+!.gitignore
+!ass3_log_conf.json
+!README.md

@@ -1,0 +1,39 @@
+{
+  "version": 1,
+  "disable_existing_loggers": true,
+  "formatters": {
+    "console_formatter": {
+      "format": "%(levelname)s | %(message)s"
+    },
+    "file_formatter": {
+      "format": "%(asctime)s | %(name)s | %(levelname)s | %(message)s",
+      "datefmt": "%Y-%m-%d %H:%M:%S"
+    }
+  },
+  "handlers": {
+    "console_handler": {
+      "class": "logging.StreamHandler",
+      "level": "INFO",
+      "formatter": "console_formatter",
+      "stream": "ext://sys.stdout"
+    },
+    "file_handler": {
+      "class": "logging.FileHandler",
+      "level": "DEBUG",
+      "formatter": "file_formatter",
+      "filename": "../_Resources/ass_3.log",
+      "mode": "w"
+    }
+  },
+  "loggers": {
+    "ass_3_logger": {
+      "level": "DEBUG",
+      "handlers": ["console_handler", "file_handler"],
+      "propagate": "no"
+    }
+  },
+  "root": {
+    "level": "DEBUG",
+    "handlers": ["console_handler"]
+  }
+}
