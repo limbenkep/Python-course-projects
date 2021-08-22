@@ -20,12 +20,10 @@ import logging
 import logging.config
 import json
 
-__version__ = '1.0'
+__version__ = '1.1'
 __desc__ = "Program used for measuríng execution time of various Fibonacci implementations!"
 
-LINE = '\n' + ("---------------" * 5)
-RESOURCES = Path(__file__) / "../../_Resources/"
-LOGGER = None  # declared at module level, will be defined from main()
+RESOURCES = Path(__file__).parent / "../_Resources/"
 
 
 def create_logger() -> logging.Logger:
@@ -86,6 +84,7 @@ def duration_format(duration: float, precision: str) -> str:
 
 def print_statistics(fib_details: dict, nth_value: int):
     """Function which handles printing to console."""
+    line = '\n' + ("---------------" * 5)
     pass  # TODO: Replace with implementation!
 
 
