@@ -18,8 +18,8 @@ STORE result in variable 'TOTAL'.
 Expected output:
     -5 + 8 + 7.6 = 10
 '''
+TOTAL = A + int(B) + int(C)
 
-# TODO: implement your solution for pseudo code!
 
 print("{} + {} + {} = {}".format(A, B, C, TOTAL))  # DO NOT MODIFY
 
@@ -29,6 +29,7 @@ print("{} + {} + {} = {}".format(A, B, C, TOTAL))  # DO NOT MODIFY
 TEXT = "I wrote my very first program at age 10!"   # DO NOT MODIFY CONSTANT VALUES
 OUTPUT = str()                                      # DO NOT MODIFY DATA TYPE
 
+
 ''' PSEUDO CODE
 DETERMINE whether 'TEXT' contains the value of 'TOTAL' as substring.
 IF True STORE "true that" in variable 'OUTPUT' ELSE STORE "nope".
@@ -37,6 +38,9 @@ Expected output:
     Value of 'TOTAL' exists in string: true that
 '''
 
-# TODO: implement your solution for pseudo code!
+if TEXT.find(str(TOTAL))==-1:
+    OUTPUT = "nope"
+else:
+    OUTPUT = "true that"
 
 print("Value of 'TOTAL' exists in string: {}".format(OUTPUT))  # DO NOT MODIFY
