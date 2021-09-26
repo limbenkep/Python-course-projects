@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+ #!/usr/bin/env python
 
 """ DT179G - LAB ASSIGNMENT 2
 You find the description for the assignment in Moodle, where each detail regarding requirements
@@ -33,7 +33,16 @@ def authenticate_user(credentials: str) -> bool:
     VALIDATE that both values corresponds to expected credentials existing within dictionary.
     RETURN outcome of validation as BOOLEAN VALUE.
     '''
-    pass  # TODO: Replace with implementation!
+    credentials_list = credentials.split()
+    if len(credentials_list) is not 3:
+        return False
+    else:
+        username_list = format_username([credentials_list[0], credentials_list[1]])
+        username = "_".join(username_list)
+        if username in agents.keys():
+            return True
+        return False
+
 
 
 def format_username(username: list) -> str:
@@ -45,7 +54,9 @@ def format_username(username: list) -> str:
     REPLACE empty space between given name and surname with UNDERSCORE '_'
     RETURN formatted username as string value.
     '''
-    pass  # TODO: Replace with implementation!
+    for val in username:
+        val.capitalize()
+    return "_".join(username)
 
 
 def decrypt_password(password: str) -> str:
