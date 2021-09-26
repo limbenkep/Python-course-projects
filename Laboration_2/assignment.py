@@ -34,7 +34,7 @@ def authenticate_user(credentials: str) -> bool:
     RETURN outcome of validation as BOOLEAN VALUE.
     '''
     credentials_list = credentials.split()
-    usernam"e = format_username([credentials_list[0], credentials_list[1]])"
+    username = format_username([credentials_list[0], credentials_list[1]])
     password = decrypt_password(credentials_list[2])
     return (username, password) in agents.items()
 
