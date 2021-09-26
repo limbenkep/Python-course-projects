@@ -1,4 +1,4 @@
- #!/usr/bin/env python
+# !/usr/bin/env python
 
 """ DT179G - LAB ASSIGNMENT 2
 You find the description for the assignment in Moodle, where each detail regarding requirements
@@ -20,9 +20,9 @@ __desc__ = "A simple script used to authenticate spies!"
 def authenticate_user(credentials: str) -> bool:
     """Procedure for validating user credentials"""
     agents = {  # Expected credentials. MAY NOT BE MODIFIED!!
-        'Chevy_Chase': 'i0J0u0j0u0J0Zys0r0{',   # cipher: bAnanASplit
-        'Dan_Aykroyd': 'i0N00h00^0{b',          # cipher: bEaUtY
-        'John_Belushi': 'j0J0sc0v0w0L0',        # cipher: cAlZonE
+        'Chevy_Chase': 'i0J0u0j0u0J0Zys0r0{',  # cipher: bAnanASplit
+        'Dan_Aykroyd': 'i0N00h00^0{b',  # cipher: bEaUtY
+        'John_Belushi': 'j0J0sc0v0w0L0',  # cipher: cAlZonE
     }
     user_tmp = pass_tmp = str()
 
@@ -34,15 +34,9 @@ def authenticate_user(credentials: str) -> bool:
     RETURN outcome of validation as BOOLEAN VALUE.
     '''
     credentials_list = credentials.split()
-    if len(credentials_list) is not 3:
-        return False
-    else:
-        username_list = format_username([credentials_list[0], credentials_list[1]])
-        username = "_".join(username_list)
-        if username in agents.keys():
-            return True
-        return False
-
+    usernam"e = format_username([credentials_list[0], credentials_list[1]])"
+    password = decrypt_password(credentials_list[2])
+    return (username, password) in agents.items()
 
 
 def format_username(username: list) -> str:
@@ -54,15 +48,17 @@ def format_username(username: list) -> str:
     REPLACE empty space between given name and surname with UNDERSCORE '_'
     RETURN formatted username as string value.
     '''
-    for val in username:
-        val.capitalize()
+    edited_username = str()
+    for val in range(len(username)):
+        tmp = username[val].lower()
+        username[val] = tmp.capitalize()
     return "_".join(username)
 
 
 def decrypt_password(password: str) -> str:
     """Procedure used to decrypt user provided password"""
-    rot7, rot9 = 7, 9       # Rotation values. MAY NOT BE MODIFIED!!
-    vowels = 'AEIOUaeiou'   # MAY NOT BE MODIFIED!!
+    rot7, rot9 = 7, 9  # Rotation values. MAY NOT BE MODIFIED!!
+    vowels = 'AEIOUaeiou'  # MAY NOT BE MODIFIED!!
     decrypted = str()
 
     ''' PSEUDO CODE
@@ -74,7 +70,25 @@ def decrypt_password(password: str) -> str:
     }
     RETURN decrypted string value
     '''
-    pass  # TODO: Replace with implementation!
+
+    def rotate_ascii(val):
+        if val > 127:
+            return (val % 127) + 31  # add 32 inorder to use only standard ascii values
+        return val
+
+    def get_shifted_unicode(letter, index):
+        if index % 2 == 0:
+            return rotate_ascii(ord(letter) + rot7)
+        return rotate_ascii(ord(letter) + rot9)
+
+    for idx, ch in enumerate(password):
+        decrypted_ch = chr(get_shifted_unicode(ch, idx))
+        if ch in vowels:
+            new_str = '0' + decrypted_ch + '0'
+            decrypted += new_str
+        else:
+            decrypted += decrypted_ch
+    return decrypted
 
 
 def main():
