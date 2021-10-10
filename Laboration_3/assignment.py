@@ -65,7 +65,6 @@ def measurements_decorator(func):
             counter += 1
         duration = timer() - start_time
         return duration, result
-
     return wrapper
 
 
