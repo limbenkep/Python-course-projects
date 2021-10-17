@@ -93,10 +93,10 @@ def is_rim_cell(_position: tuple, _world_size: tuple):
     """Check and returns true if cell is a rim cell else returns false"""
     width = _world_size[0]
     height = _world_size[1]
-    row = _position[0]
-    col = _position[1]
+    y = _position[0]
+    x = _position[1]
     """check if cell's row or column is the world's first or last row or column """
-    if row == 0 or col == 0 or row == (width - 1) or col == (height - 1):
+    if x == 0 or y == 0 or x == (width - 1) or y == (height - 1):
         return True
     return False
 
@@ -105,6 +105,9 @@ def populate_world(_world_size: tuple, _seed_pattern: str = None) -> dict:
     """ Populate  return the world with cells and initial states. """
     width = _world_size[0]
     height = _world_size[1]
+
+    def swap_coordinate_points(pattern: list):
+        return [(val[1],val[0]) for val in pattern]
 
     def get_cell_state(position):
         """Determine the state of cell from pattern or by randomization and return it
@@ -136,7 +139,7 @@ def populate_world(_world_size: tuple, _seed_pattern: str = None) -> dict:
     world = {}
     for x in range(width):
         for y in range(height):
-            world[(x, y)] = get_cell_object((x, y))
+            world[(y, x)] = get_cell_object((y, x))
     return world
 
 
@@ -204,9 +207,9 @@ def update_world(_cur_gen: dict, _world_size: tuple) -> dict:
     next_generation = {}
     """for cell in every position in world, print current cell state, determine state for next generation 
     and store a copy of cell with updated state for next generation """
-    for x in range(width):
-        for y in range(height):
-            key = (x, y)
+    for y in range(height):
+        for x in range(width):
+            key = (y, x)
             if is_rim_cell(key, _world_size):
                 cb.progress(cb.get_print_value(cb.STATE_RIM))
                 next_generation[key] = None
