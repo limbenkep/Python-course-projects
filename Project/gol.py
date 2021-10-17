@@ -206,14 +206,15 @@ def update_world(_cur_gen: dict, _world_size: tuple) -> dict:
     and store a copy of cell with updated state for next generation """
     for x in range(width):
         for y in range(height):
-            if is_rim_cell((x, y), _world_size):
-                print(cb.get_print_value(cb.STATE_RIM), end="")
-                next_generation[(x, y)] = None
+            key = (x, y)
+            if is_rim_cell(key, _world_size):
+                cb.progress(cb.get_print_value(cb.STATE_RIM))
+                next_generation[key] = None
             else:
-                cell_object = _cur_gen[(x, y)]
+                cell_object = _cur_gen[key]
                 [(state, neighbours)] = cell_object.items()
-                print(cb.get_print_value(state), end="")
-                next_generation[(x, y)] = {get_cell_next_state((x, y)): neighbours}
+                cb.progress(cb.get_print_value(state))
+                next_generation[key] = {get_cell_next_state(key): neighbours}
         print("")
     return next_generation
 
