@@ -25,15 +25,17 @@ You run this script as a module:
 """
 
 import argparse
+import pathlib
 import random
 import json
 import logging
 import itertools
+import sys
 import time
 from pathlib import Path
 from ast import literal_eval
 from time import sleep
-
+import os
 import code_base as cb
 
 __version__ = '1.0'
@@ -48,7 +50,146 @@ RESOURCES = Path(__file__).parent / "../_Resources/"
 
 def load_seed_from_file(_file_name: str) -> tuple:
     """ Load population seed from file. Returns tuple: population (dict) and world_size (tuple). """
-    pass
+    length = len(_file_name)
+    if length < 5:
+        _file_name = _file_name + ".json"
+    else:
+        last_five = _file_name[-5:]
+        print("Printing last five characters", last_five)
+        if last_five == ".json":
+            _file_name = _file_name
+        else:
+            _file_name = _file_name + ".json"
+
+    path = pathlib.Path.home() / RESOURCES / _file_name
+    print(f"The file to read is  {_file_name} with path {path}")
+
+    def parse_world_size_form_file(file_data):
+        """Checks and returns world size if world size data is a list of two integers else raise exception"""
+        try:
+            """TypeError generated if data["world_size"] is not a list of size 2 """
+            [width, height] = file_data["world_size"]
+            """TypeError generated if width or height is not an integers"""
+            if width < 1 or height < 1:
+                raise ValueError("Both width and height has to be positive values above zero.")
+            return width, height
+        except TypeError as e:
+            print("World size should be a list containing two integers corresponding to width and height")
+            sys.exit()
+        except ValueError as e:
+            print(e)
+            sys.exit()
+        except Exception as e:
+            print(e)
+            sys.exit()
+
+    def parse_coordinates_from_file(coordinate_str, world_size):
+        """Checks if coordinates is tuple with two int and if values conforms with world size"""
+        try:
+            [width, height] = world_size
+            coordinate = literal_eval(coordinate_str)
+            (y, x) = coordinate
+            if y < 0 or x < 0 or x > width - 1 or y > height - 1:
+                raise ValueError("Coordinate values out of bounds")
+            return y, x
+        except TypeError:
+            print("Coordinates should be in format (y, x) where x and y are integers")
+            sys.exit()
+        except ValueError as e:
+            sys.exit(str(e))
+        except Exception as e:
+            sys.exit(str(e))
+
+    def parse_cell_object_from_file(cell_object, world_size):
+        """Checks and returns cell object if it conforms to expected data or raise exception"""
+        try:
+            if not isinstance(cell_object, dict) and cell_object is not None:
+                raise TypeError("Cell coordinates should be map a dictionary containing state "
+                                "and neighbours or none.")
+            if cell_object is None:
+                return None
+            state = cell_object["state"]
+            neighbours = cell_object["neighbours"]
+            new_cell_object = {}
+            if not isinstance(state, str):
+                raise TypeError("State should be a string")
+            if state is not cb.STATE_ALIVE and state is not cb.STATE_DEAD and state is not cb.STATE_RIM:
+                raise ValueError("Invalid state value. The values should be'#' or '-' or 'x'.")
+            if not isinstance(neighbours, list):
+                raise TypeError("Neighbours should be a list of coordinates of neighbouring cells")
+            new_cell_object[state] = parse_neighbours_from_file(neighbours, world_size)
+            return new_cell_object
+        except KeyError:
+            print("Key 'state' should cell state and 'neighbour should map cell neighbours")
+            sys.exit()
+        except TypeError as e:
+            print(str(e))
+            sys.exit()
+        except ValueError as e:
+            print(str(e))
+            sys.exit()
+        except Exception as e:
+            print(str(e))
+            sys.exit()
+
+    def parse_population_from_file(file_data, world_size):
+        try:
+            population = file_data["population"]
+            # print(type(population))
+            cells_world = {}
+            if not isinstance(population, dict):
+                raise TypeError("World population should a dictionary")
+            for key, value in population.items():
+                coordinate = parse_coordinates_from_file(key, world_size)
+                # cell = population[coordinate]
+                cells_world[coordinate] = parse_cell_object_from_file(value, world_size)
+            return cells_world
+        except KeyError as e:
+            print("Key 'population' should be used to map population")
+            print(20 * "*" + "\nPrinting KeyError")
+            print(str(e))
+            sys.exit()
+        except TypeError as e:
+            print(20 * "*" + "\nPrinting TypeError")
+            print(str(e))
+            sys.exit()
+        except Exception as e:
+            print(20 * "*" + "\nPrinting Exception")
+            print(str(e))
+            sys.exit()
+
+    def parse_neighbours_from_file(neighbours, world_size):
+        try:
+            (width, height) = world_size
+            new_list = []
+            if not isinstance(neighbours, list):
+                raise TypeError("Neighbours should be a list of coordinates with format (x, Y) "
+                                "where x and y are integers")
+            for coordinate in neighbours:
+                if len(coordinate) != 2:
+                    raise TypeError("Neighbours coordinates should be two integers")
+                y = coordinate[0]
+                x = coordinate[1]
+                if y < 0 or x < 0 or x > width - 1 or y > height:
+                    raise ValueError("Coordinate values out of bounds")
+                new_list.append((y, x))
+            return new_list
+        except TypeError as e:
+            sys.exit(str(e))
+        except ValueError as e:
+            print(e)
+            sys.exit(str(e))
+        except Exception as e:
+            print(e)
+            sys.exit(str(e))
+
+    with open(path, 'r') as file:
+        data = json.load(file)
+        size = parse_world_size_form_file(data)
+        print("size: {}".format(size))
+        world = parse_population_from_file(data, size)
+        print(f"Value of world={world} and has size {size}")
+        return world, size
 
 
 def create_logger() -> logging.Logger:
@@ -68,7 +209,6 @@ def simulation_decorator(func):
 def parse_world_size_arg(_arg: str) -> tuple:
     """ Parse width and height from command argument. """
     values = _arg.split("x")
-    print(values)
     try:
         assert len(values) == 2, "World size should contain width and length, seperated by 'x', Ex: '80x40'."
 
@@ -107,7 +247,7 @@ def populate_world(_world_size: tuple, _seed_pattern: str = None) -> dict:
     height = _world_size[1]
 
     def swap_coordinate_points(pattern: list):
-        return [(val[1],val[0]) for val in pattern]
+        return [(val[1], val[0]) for val in pattern]
 
     def get_cell_state(position):
         """Determine the state of cell from pattern or by randomization and return it
