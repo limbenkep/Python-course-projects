@@ -29,13 +29,10 @@ import pathlib
 import random
 import json
 import logging
-import itertools
 import sys
-import time
 from pathlib import Path
 from ast import literal_eval
 from time import sleep
-import os
 import code_base as cb
 
 __version__ = '1.0'
@@ -48,8 +45,159 @@ RESOURCES = Path(__file__).parent / "../_Resources/"
 # IMPLEMENTATIONS FOR HIGHER GRADES, C - B
 # -----------------------------------------
 
+def parse_world_size_form_file(world_size_data):
+    """Receives world size read from file as a List,
+     check if list contains exactly two integers each greater than zero
+     extract width and height and return them as a tuple which is the
+     expected format to be used in world population
+     or raise exception if and exit if validation fails"""
+    try:
+        """TypeError generated if data["world_size"] is not a list of size 2 """
+        [width, height] = world_size_data["world_size"]
+        """TypeError generated if width or height is not an integers"""
+        if width < 1 or height < 1:
+            raise ValueError("Both width and height needs to have "
+                             "positive values above zero.")
+        return width, height
+    except TypeError as e:
+        print("World size should be a list containing two "
+              "integers corresponding to width and height")
+        sys.exit()
+    except ValueError as e:
+        print(e)
+        sys.exit()
+    except Exception as e:
+        print(e)
+        sys.exit()
+
+
+def parse_coordinates_from_file(coordinate_str, world_size):
+    """Receives coordinates read from file as a string and convert it to a tuple,
+     then check if coordinates are two  integers and
+    if values falls within the expected range for the given world size"""
+    try:
+        [width, height] = world_size
+        coordinate = literal_eval(coordinate_str)
+        (y, x) = coordinate
+        if y < 0 or x < 0 or x > width - 1 or y > height - 1:
+            raise ValueError("Coordinate values out of bounds")
+        return y, x
+    except TypeError:
+        print("Coordinates should be in format (y, x) where x and y are integers")
+        sys.exit()
+    except ValueError as e:
+        sys.exit(str(e))
+    except Exception as e:
+        sys.exit(str(e))
+
+
+def parse_neighbours_from_file(neighbours, world_size):
+    """Receives neighbours data read from file as a list,
+     Check if the read data is a list of 8 elements ,
+     and if each element is a list of 2 integers greater than zero
+     and lies within the expected range for the given world size
+      store each neighbour as a tuple return a list of all neighbours"""
+    try:
+        (width, height) = world_size
+        new_list = []
+        if not isinstance(neighbours, list) or len(neighbours) != 8:
+            raise TypeError("Neighbours should be a list of coordinates with format (x, Y) "
+                            "where x and y are integers")
+        for coordinate in neighbours:
+            if len(coordinate) != 2:
+                raise TypeError("Neighbours coordinates should be two integers")
+            y = coordinate[0]
+            x = coordinate[1]
+            if y < 0 or x < 0 or x > width - 1 or y > height:
+                raise ValueError("Coordinate values out of bounds")
+            new_list.append((y, x))
+        return new_list
+    except TypeError as e:
+        sys.exit(str(e))
+    except ValueError as e:
+        print(e)
+        sys.exit(str(e))
+    except Exception as e:
+        print(e)
+        sys.exit(str(e))
+
+
+def parse_cell_object_from_file(cell_object, world_size):
+    """receives data read from file corresponding to cell details,
+    check that the read data is a dictionary,
+    extract data for cell state and compare to expected values,
+    extract data for neighbours and call function to parse neighbours
+    return state and neighbour as a key:value pair
+    raise exception and exit"""
+    try:
+        if not isinstance(cell_object, dict) and cell_object is not None:
+            raise TypeError("Cell coordinates should be map a dictionary containing state "
+                            "and neighbours or none.")
+        if cell_object is None:
+            return None
+        state = cell_object["state"]
+        neighbours = cell_object["neighbours"]
+        new_cell_object = {}
+        if not isinstance(state, str):
+            raise TypeError("State should be a string")
+        if state is not cb.STATE_ALIVE and state is not cb.STATE_DEAD and state is not cb.STATE_RIM:
+            raise ValueError("Invalid state value. The values should be'#' or '-' or 'x'.")
+        if not isinstance(neighbours, list):
+            raise TypeError("Neighbours should be a list of coordinates of neighbouring cells")
+        new_cell_object[state] = parse_neighbours_from_file(neighbours, world_size)
+        return new_cell_object
+    except KeyError:
+        print("Key 'state' should cell state and 'neighbour should map cell neighbours")
+        sys.exit()
+    except TypeError as e:
+        print(str(e))
+        sys.exit()
+    except ValueError as e:
+        print(str(e))
+        sys.exit()
+    except Exception as e:
+        print(str(e))
+        sys.exit()
+
+
+def parse_population_from_file(file_data: dict, world_size: tuple) -> dict:
+    """Receives data read form file.
+    Get data for cell population using key 'population'
+    which throws keyError exception if key not found,
+    check that population is a dictionary,
+    for every key:value pair, key is coordinate data which is parsed
+    by calling function parse_coordinates_from_file,
+    and value contain cell details which is parsed by calling method
+    parse_cell_object_from_file
+    all parsed coordinate:cell details pairs are stored in a dictionary and returned """
+    try:
+        population = file_data["population"]
+        parsed_population = {}
+        if not isinstance(population, dict):
+            raise TypeError("World population should a dictionary")
+        for key, value in population.items():
+            coordinate = parse_coordinates_from_file(key, world_size)
+            parsed_population[coordinate] = parse_cell_object_from_file(value, world_size)
+        return parsed_population
+    except KeyError as e:
+        print("Key 'population' should be used to map population")
+        print(str(e))
+        sys.exit()
+    except TypeError as e:
+        print(str(e))
+        sys.exit()
+    except Exception as e:
+        print(str(e))
+        sys.exit()
+
+
 def load_seed_from_file(_file_name: str) -> tuple:
-    """ Load population seed from file. Returns tuple: population (dict) and world_size (tuple). """
+    """ Read population seed from file.
+    check if data is of correct type, if not throw exception,
+    print error message end program.
+    Else parse data and store in a dictionary in the expected format for world.
+    Returns tuple: population (dict) and world_size (tuple). """
+
     length = len(_file_name)
     if length < 5:
         _file_name = _file_name + ".json"
@@ -63,126 +211,6 @@ def load_seed_from_file(_file_name: str) -> tuple:
 
     path = pathlib.Path.home() / RESOURCES / _file_name
     print(f"The file to read is  {_file_name} with path {path}")
-
-    def parse_world_size_form_file(file_data):
-        """Checks and returns world size if world size data is a list of two integers else raise exception"""
-        try:
-            """TypeError generated if data["world_size"] is not a list of size 2 """
-            [width, height] = file_data["world_size"]
-            """TypeError generated if width or height is not an integers"""
-            if width < 1 or height < 1:
-                raise ValueError("Both width and height has to be positive values above zero.")
-            return width, height
-        except TypeError as e:
-            print("World size should be a list containing two integers corresponding to width and height")
-            sys.exit()
-        except ValueError as e:
-            print(e)
-            sys.exit()
-        except Exception as e:
-            print(e)
-            sys.exit()
-
-    def parse_coordinates_from_file(coordinate_str, world_size):
-        """Checks if coordinates is tuple with two int and if values conforms with world size"""
-        try:
-            [width, height] = world_size
-            coordinate = literal_eval(coordinate_str)
-            (y, x) = coordinate
-            if y < 0 or x < 0 or x > width - 1 or y > height - 1:
-                raise ValueError("Coordinate values out of bounds")
-            return y, x
-        except TypeError:
-            print("Coordinates should be in format (y, x) where x and y are integers")
-            sys.exit()
-        except ValueError as e:
-            sys.exit(str(e))
-        except Exception as e:
-            sys.exit(str(e))
-
-    def parse_cell_object_from_file(cell_object, world_size):
-        """Checks and returns cell object if it conforms to expected data or raise exception"""
-        try:
-            if not isinstance(cell_object, dict) and cell_object is not None:
-                raise TypeError("Cell coordinates should be map a dictionary containing state "
-                                "and neighbours or none.")
-            if cell_object is None:
-                return None
-            state = cell_object["state"]
-            neighbours = cell_object["neighbours"]
-            new_cell_object = {}
-            if not isinstance(state, str):
-                raise TypeError("State should be a string")
-            if state is not cb.STATE_ALIVE and state is not cb.STATE_DEAD and state is not cb.STATE_RIM:
-                raise ValueError("Invalid state value. The values should be'#' or '-' or 'x'.")
-            if not isinstance(neighbours, list):
-                raise TypeError("Neighbours should be a list of coordinates of neighbouring cells")
-            new_cell_object[state] = parse_neighbours_from_file(neighbours, world_size)
-            return new_cell_object
-        except KeyError:
-            print("Key 'state' should cell state and 'neighbour should map cell neighbours")
-            sys.exit()
-        except TypeError as e:
-            print(str(e))
-            sys.exit()
-        except ValueError as e:
-            print(str(e))
-            sys.exit()
-        except Exception as e:
-            print(str(e))
-            sys.exit()
-
-    def parse_population_from_file(file_data, world_size):
-        try:
-            population = file_data["population"]
-            # print(type(population))
-            cells_world = {}
-            if not isinstance(population, dict):
-                raise TypeError("World population should a dictionary")
-            for key, value in population.items():
-                coordinate = parse_coordinates_from_file(key, world_size)
-                # cell = population[coordinate]
-                cells_world[coordinate] = parse_cell_object_from_file(value, world_size)
-            return cells_world
-        except KeyError as e:
-            print("Key 'population' should be used to map population")
-            print(20 * "*" + "\nPrinting KeyError")
-            print(str(e))
-            sys.exit()
-        except TypeError as e:
-            print(20 * "*" + "\nPrinting TypeError")
-            print(str(e))
-            sys.exit()
-        except Exception as e:
-            print(20 * "*" + "\nPrinting Exception")
-            print(str(e))
-            sys.exit()
-
-    def parse_neighbours_from_file(neighbours, world_size):
-        try:
-            (width, height) = world_size
-            new_list = []
-            if not isinstance(neighbours, list):
-                raise TypeError("Neighbours should be a list of coordinates with format (x, Y) "
-                                "where x and y are integers")
-            for coordinate in neighbours:
-                if len(coordinate) != 2:
-                    raise TypeError("Neighbours coordinates should be two integers")
-                y = coordinate[0]
-                x = coordinate[1]
-                if y < 0 or x < 0 or x > width - 1 or y > height:
-                    raise ValueError("Coordinate values out of bounds")
-                new_list.append((y, x))
-            return new_list
-        except TypeError as e:
-            sys.exit(str(e))
-        except ValueError as e:
-            print(e)
-            sys.exit(str(e))
-        except Exception as e:
-            print(e)
-            sys.exit(str(e))
-
     with open(path, 'r') as file:
         data = json.load(file)
         size = parse_world_size_form_file(data)
@@ -194,12 +222,54 @@ def load_seed_from_file(_file_name: str) -> tuple:
 
 def create_logger() -> logging.Logger:
     """ Creates a logging object to be used for reports. """
-    pass
+    logger = logging.getLogger("gol_logger")
+    logger.setLevel(logging.INFO)
+
+    log_path = pathlib.Path.home() / RESOURCES / "gol.log"
+    file_handler = logging.FileHandler(log_path, mode="w")
+    file_handler.setLevel(logging.INFO)
+    logger.addHandler(file_handler)
+    return logger
 
 
 def simulation_decorator(func):
     """ Function decorator, used to run full extent of simulation. """
-    pass
+    logger = create_logger()
+
+    def wrapper(*args):
+        """number of rim cells is the same for all generations,
+        so count all rim cells by checking the state for each cell,
+        then loop for the number of generations given.
+        For each generation get new generation by calling func which will be
+        run_simulation function that prints current generation and returns next generation,
+        count live and dead cells ,
+        log data and new generation becomes current generation for the next generation
+
+        """
+        current_population = args[1]
+        ordinary_cells = 0
+        for coordinate in current_population.keys():
+            if not is_rim_cell(coordinate, args[2]):
+                ordinary_cells += 1
+        for val in range(args[0]):
+            cb.clear_console()
+            new_population = func(args[0], current_population, args[2])
+
+            live_count = 0
+            dead_count = 0
+            for key, value in current_population.items():
+                if value is not None:
+                    [state] = value.keys()
+                    if state == cb.STATE_ALIVE:
+                        live_count += 1
+                    if state == cb.STATE_DEAD:
+                        dead_count += 1
+
+            logger.info("GENERATION {}\n  Population: {}\n  Alive: {}\n  Dead: {}"
+                        .format(val, ordinary_cells, live_count, dead_count))
+            current_population = new_population
+            sleep(0.2)
+    return wrapper
 
 
 # -----------------------------------------
@@ -208,19 +278,23 @@ def simulation_decorator(func):
 
 def parse_world_size_arg(_arg: str) -> tuple:
     """ Parse width and height from command argument. """
+
     values = _arg.split("x")
     try:
-        assert len(values) == 2, "World size should contain width and length, seperated by 'x', Ex: '80x40'."
-
+        """Check if list result from contain exactly two elements; width and height"""
+        assert len(values) == 2, "World size should contain width and length, " \
+                                 "seperated by 'x', Ex: '80x40'."
+        """Conversion to int will through throw an valueError exception if any of the 
+        values are not numbers"""
         width = int(values[0])
         height = int(values[1])
-
+        """Check if width and height are greater than zero"""
         if width < 1 or height < 1:
-            raise ValueError("Both width and height has to be positive values above zero."
-                             "\nUsing default world size : 80x40")
+            raise ValueError("Both width and height needs to have positive values above zero.")
         return width, height
     except AssertionError as e:
-        print(e)
+        print("{}\nUsing default world size : 80x40".format(e))
+        return 80, 40
     except ValueError as e:
         print("{}\nUsing default world size : 80x40".format(e))
         return 80, 40
@@ -242,15 +316,21 @@ def is_rim_cell(_position: tuple, _world_size: tuple):
 
 
 def populate_world(_world_size: tuple, _seed_pattern: str = None) -> dict:
-    """ Populate  return the world with cells and initial states. """
+    """ This function populate return the world with seed population.
+     two helper inner functions are used here for readability and to avoid nesting at multiple levels.
+     Here the format of the coordinate is (y,x) format to match the format used in provided patterns"""
     width = _world_size[0]
     height = _world_size[1]
 
-    def swap_coordinate_points(pattern: list):
-        return [(val[1], val[0]) for val in pattern]
-
     def get_cell_state(position):
-        """Determine the state of cell from pattern or by randomization and return it
+        """Determine the state of a cell.
+         Check if cell is a rim cell by calling function is_rim_cell if so return STATE_RIM,
+         get pattern, returns a list of coordinates if _seed_pattern is one of the predefined patterns
+         or None if the given pattern is unknown or if no pattern was passed.
+         if pattern is None get a random integer and
+         if the integer is greater than 16 return STATE_ALIVE else return STATE_DEAD
+        else check if coordinate is found in the list returned by get_pattern, if yes return STATE_ALIVE
+        else return STATE_DEAD
         cells state are determined from pattern if given or by randomisation if pattern is not given"""
         if is_rim_cell(position, _world_size):
             return cb.STATE_RIM
@@ -309,15 +389,10 @@ def calc_neighbour_positions(_cell_coord: tuple) -> list:
     return neighbours
 
 
+@simulation_decorator
 def run_simulation(_generations: int, _population: dict, _world_size: tuple):
-    """ Runs simulation for specified amount of generations. """
-    current_population = _population
-
-    for val in range(_generations):
-        cb.clear_console()
-        new_population = update_world(current_population, _world_size)
-        current_population = new_population
-        time.sleep(0.2)
+    """ Encapsulates the update_world function and Represents a tick in the simulation. """
+    return update_world(_population, _world_size)
 
 
 def update_world(_cur_gen: dict, _world_size: tuple) -> dict:
@@ -345,8 +420,10 @@ def update_world(_cur_gen: dict, _world_size: tuple) -> dict:
     width = _world_size[0]
     height = _world_size[1]
     next_generation = {}
-    """for cell in every position in world, print current cell state, determine state for next generation 
-    and store a copy of cell with updated state for next generation """
+    """for cell in every position in world, print current cell state, 
+    determine state for next generation,
+    store a copy of cell with updated state for next generation to a new dictionary and 
+    return the new dictionary. """
     for y in range(height):
         for x in range(width):
             key = (y, x)
@@ -363,11 +440,17 @@ def update_world(_cur_gen: dict, _world_size: tuple) -> dict:
 
 
 def count_alive_neighbours(_neighbours: list, _cells: dict) -> int:
-    """ Determine how many of the neighbouring cells are currently alive."""
+    """ Determine how many of the neighbouring cells are currently alive.
+    Start counter live_cell at 0
+    For each cell in _neighbours, check that the cell is not a rim cell because
+    rim cells cell has a None value for cell_object and .keys() operation on a
+    None value will generate an error.
+    If cell is not a rim cell, check if cell is alive,
+    if yes, increase counter live_cell by 1"""
     live_cell = 0
     for val in _neighbours:
         cell_object = _cells[val]
-        """if cell is noto a rim-cell"""
+        """if cell is not a rim-cell"""
         if cell_object is not None:
             [state] = cell_object.keys()
             if state == cb.STATE_ALIVE:
