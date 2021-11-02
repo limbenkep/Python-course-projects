@@ -145,6 +145,7 @@ def parse_cell_object_from_file(cell_object, world_size):
         if not isinstance(neighbours, list):
             raise TypeError("Neighbours should be a list of coordinates of neighbouring cells")
         new_cell_object[state] = parse_neighbours_from_file(neighbours, world_size)
+        new_cell_object["age"] = 0
         return new_cell_object
     except KeyError:
         print("Key 'state' should cell state and 'neighbour should map cell neighbours")
@@ -242,7 +243,7 @@ def simulation_decorator(func):
         then loop for the number of generations given.
         For each generation get new generation by calling func which will be
         run_simulation function that prints current generation and returns next generation,
-        count live and dead cells ,
+        count live, elder, prime_elder and dead cells ,
         log data and new generation becomes current generation for the next generation
 
         """
@@ -257,16 +258,23 @@ def simulation_decorator(func):
 
             live_count = 0
             dead_count = 0
+            elder_count = 0
+            prime_elder_count = 0
             for key, value in current_population.items():
                 if value is not None:
-                    [state] = value.keys()
+                    state = get_state_from_cell_details(value)
                     if state == cb.STATE_ALIVE:
                         live_count += 1
                     if state == cb.STATE_DEAD:
                         dead_count += 1
+                    if state == cb.STATE_ELDER:
+                        elder_count += 1
+                    if state == cb.STATE_PRIME_ELDER:
+                        prime_elder_count += 1
 
-            logger.info("GENERATION {}\n  Population: {}\n  Alive: {}\n  Dead: {}"
-                        .format(val, ordinary_cells, live_count, dead_count))
+            logger.info("GENERATION {}\n  Population: {}\n  Alive: {}\n  Elders: {}\n  Prime Elders: {}\n  Dead: {}"
+                        .format(val, ordinary_cells, live_count + elder_count + prime_elder_count, elder_count,
+                                prime_elder_count, dead_count))
             current_population = new_population
             sleep(0.2)
     return wrapper
@@ -353,7 +361,7 @@ def populate_world(_world_size: tuple, _seed_pattern: str = None) -> dict:
         else:
             neighbours = calc_neighbour_positions(position)
             state = get_cell_state(position)
-            return {state: neighbours}
+            return {state: neighbours, "age": 0}
 
     """Map world positions to corresponding cell objects and return world"""
     world = {}
@@ -389,6 +397,13 @@ def calc_neighbour_positions(_cell_coord: tuple) -> list:
     return neighbours
 
 
+def get_state_from_cell_details(_cell_details):
+    """get state key by get the key that is not 'age'"""
+    for key in _cell_details.keys():
+        if key is not "age":
+            return key
+
+
 @simulation_decorator
 def run_simulation(_generations: int, _population: dict, _world_size: tuple):
     """ Encapsulates the update_world function and Represents a tick in the simulation. """
@@ -400,22 +415,48 @@ def update_world(_cur_gen: dict, _world_size: tuple) -> dict:
     Prints current generation and generate and returns next generation """
 
     def get_cell_next_state(position: tuple):
-        """Determine cell state for next generation from current cell state and state of neighbours
+        """Determine cell state for next generation from current cell state and state of neighbours,
+        and update age by adding 1 to age value if cell is alive and assigning zero to age if dead
         Any live cell with two or three live neighbours survives.
         Any dead cell with three live neighbours becomes a live cell.
         All other live cells die in the next generation.
-        all other dead cells stay dead."""
+        all other dead cells stay dead.
+        For live if age >5 state is STATE_ELDER, if age >10 state is STATE_PRIME_ELDER"""
         _cell_object = _cur_gen[position]
-        [(_state, _neighbours)] = _cell_object.items()
+        _state = get_state_from_cell_details(_cell_object)
+        _neighbours = _cell_object[_state]
         live_neighbour = count_alive_neighbours(_neighbours, _cur_gen)
-        if state == cb.STATE_ALIVE and live_neighbour == 2:
-            return cb.STATE_ALIVE
-        elif state == cb.STATE_ALIVE and live_neighbour == 3:
-            return cb.STATE_ALIVE
-        elif state == cb.STATE_DEAD and live_neighbour == 3:
-            return cb.STATE_ALIVE
+        if _state == cb.STATE_ALIVE and live_neighbour == 2:
+            age = _cell_object["age"] + 1
+            if age > 5:
+                return cb.STATE_ELDER, age
+            return cb.STATE_ALIVE, age
+        elif _state == cb.STATE_ALIVE and live_neighbour == 3:
+            age = _cell_object["age"] + 1
+            if age > 5:
+                return cb.STATE_ELDER, age
+            return cb.STATE_ALIVE, age
+        elif _state == cb.STATE_ELDER and live_neighbour == 2:
+            age = _cell_object["age"] + 1
+            if age > 10:
+                return cb.STATE_PRIME_ELDER, age
+            return cb.STATE_ELDER, age
+        elif _state == cb.STATE_ELDER and live_neighbour == 3:
+            age = _cell_object["age"] + 1
+            if age > 10:
+                return cb.STATE_PRIME_ELDER, age
+            return cb.STATE_ELDER, age
+        elif _state == cb.STATE_PRIME_ELDER and live_neighbour == 2:
+            age = _cell_object["age"] + 1
+            return cb.STATE_PRIME_ELDER, age
+        elif _state == cb.STATE_PRIME_ELDER and live_neighbour == 3:
+            age = _cell_object["age"] + 1
+            return cb.STATE_PRIME_ELDER, age
+        elif _state == cb.STATE_DEAD and live_neighbour == 3:
+            age = _cell_object["age"] + 1
+            return cb.STATE_ALIVE, age
         else:
-            return cb.STATE_DEAD
+            return cb.STATE_DEAD, 0
 
     width = _world_size[0]
     height = _world_size[1]
@@ -426,15 +467,17 @@ def update_world(_cur_gen: dict, _world_size: tuple) -> dict:
     return the new dictionary. """
     for y in range(height):
         for x in range(width):
-            key = (y, x)
-            if is_rim_cell(key, _world_size):
+            coordinate = (y, x)
+            if is_rim_cell(coordinate, _world_size):
                 cb.progress(cb.get_print_value(cb.STATE_RIM))
-                next_generation[key] = None
+                next_generation[coordinate] = None
             else:
-                cell_object = _cur_gen[key]
-                [(state, neighbours)] = cell_object.items()
+                cell_object = _cur_gen[coordinate]
+                state = get_state_from_cell_details(cell_object)
                 cb.progress(cb.get_print_value(state))
-                next_generation[key] = {get_cell_next_state(key): neighbours}
+                neighbours = cell_object[state]
+                (new_state, new_age) = get_cell_next_state(coordinate)
+                next_generation[coordinate] = {new_state: neighbours, "age": new_age}
         print("")
     return next_generation
 
@@ -445,15 +488,15 @@ def count_alive_neighbours(_neighbours: list, _cells: dict) -> int:
     For each cell in _neighbours, check that the cell is not a rim cell because
     rim cells cell has a None value for cell_object and .keys() operation on a
     None value will generate an error.
-    If cell is not a rim cell, check if cell is alive,
+    If cell is not a rim cell, check if cell state is STATE_ALIVE or STATE_ELDER, or STATE_PRIME_ELDER
     if yes, increase counter live_cell by 1"""
     live_cell = 0
     for val in _neighbours:
         cell_object = _cells[val]
         """if cell is not a rim-cell"""
         if cell_object is not None:
-            [state] = cell_object.keys()
-            if state == cb.STATE_ALIVE:
+            state = get_state_from_cell_details(cell_object)
+            if state == cb.STATE_ALIVE or state == cb.STATE_ELDER or state == cb.STATE_PRIME_ELDER:
                 live_cell += 1
     return live_cell
 

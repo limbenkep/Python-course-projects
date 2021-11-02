@@ -42,17 +42,26 @@ the desired number of generations is obtained.
  
 ## Discussion  
 This project definitely covered all sections of this course. It was very interesting and challenging. My greatest 
-challenge was arranging my code such that it could be clear and readable. I achieved this by using inner functions to 
-split up the code as can be seen for the populate_world function. In the case of the function load_seed_from_file where 
-sub functions were many and long I wrote stand-alone functions to avoid overcrowding and too long functions. For code 
-that I used more than once I also wrote a function to avoid repetition like in the case of the is_rim_cell function.
-The other challenge I had was figuring out the format of the coordinates. It took a while to realize that the coordinates 
-obtained from get_pattern was reversed. I decided to use the same format for the whole program for consistency. I also 
-need to take this into consideration when printing the populations when determining the rows and columns. For the
-function to read from file, the challenge was the fact that world had so many sets fo data with nested dictionary and 
-list. it helped a lot with the validation and parsing when i  split the different parts to separate functions. it was 
-challenging write the decorator. It took a couple of tries to find a good way to update current population. I solved 
-this by having a variable outside the loop that is assigned the initial current generation and the updated with the new 
-generation to serve as the current generation for the next generation. Overall, I required a lot of logical reasoning 
-and design apart from knowledge of available tools we learned from the different sections. It was a very interesting 
-project to work with and the course material prepared us well for it.
+challenge was arranging my code such that it could be clear and readable. I achieved this by splitting the code to 
+sub-functions using both inner functions and stand_alone functions. For example in  populate_world function, I used the 
+inner function inorder to still  have direct access to some the outer function's local variable. In the case of the 
+function load_seed_from_file where sub functions were many and long I wrote stand-alone functions to avoid overcrowding 
+and too long functions. For code that I used more than once I also wrote a function to avoid repetition like in the 
+case of the is_rim_cell and get_state_from_cell_detail function. The other challenge I had was figuring out the format 
+of the coordinates. It took a while to realize that the coordinates obtained from get_pattern was reversed. I decided 
+to use the same format for the whole program for consistency. I also need to take this into consideration when printing 
+the populations when determining the rows and columns. For the function to read from file, the challenge was the fact 
+that world had so many sets fo data with nested dictionary and list. it helped a lot with the validation and parsing 
+when i the different parts to separate functions. it was challenging write the decorator. It took a couple of tries 
+to find a good way to update current population. I solved this by having a variable outside the loop that is assigned 
+the initial current generation and the updated with the new generation to serve as the current generation for the 
+next generation. For the implementation for Grade A, the was a tip that file does not have an age attribute, 
+and it is most appropriate to compensate for it in world update. I thought of checking if current generation has
+age attribute and if not then it is added. But this will mean that this check will have to be done for every 
+generation which is unnecessary, I felt it was best to add the key attribute when world is populated and when 
+file is read, and I could not think of a reason why this will not be appropriate. The next challenge was getting the 
+state of cell from world. Since the value of state vary from cell to cell and generation to generation, it became more
+complicated to get the state after age attribute is added and state is not the only key. I solved this by getting all 
+keeps and since there are only two keys, assign the key that is not 'age' to state.
+Overall, I required a lot of logical reasoning and design apart from knowledge of available tools we learned from 
+the different sections. It was a very interesting project to work with and the course material prepared us well for it.
