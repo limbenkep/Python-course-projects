@@ -59,7 +59,7 @@ def parse_world_size_form_file(world_size_data):
             raise ValueError("Both width and height needs to have "
                              "positive values above zero.")
         return width, height
-    except TypeError as e:
+    except TypeError:
         print("World size should be a list containing two "
               "integers corresponding to width and height")
         sys.exit()

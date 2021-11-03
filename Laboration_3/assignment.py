@@ -56,7 +56,7 @@ def measurements_decorator(func):
     def wrapper(nth_nmb: int) -> tuple:
         result = list()
         start_time = timer()
-        LOGGER.info("Starting measurements...")
+        LOGGER.info("Starting measurements...{}".format(func.__name__))
         counter = 0
         for nth_nmb in range(nth_nmb, -1, -1):
             result.append(func(nth_nmb))
@@ -149,7 +149,7 @@ def write_to_file(fib_details: dict):
         fib_values = result[1]
         count = len(fib_values) -1
         try:
-            with open(new_file, 'x') as file:
+            with open(new_file, 'w') as file:
                 for val in fib_values:
                     line = str(count) + ", " + str(val)
                     file.write("{}: {}\n".format(count, val))
