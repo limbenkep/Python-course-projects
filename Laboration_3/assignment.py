@@ -27,7 +27,17 @@ RESOURCES = Path(__file__).parent / "../_Resources/"
 
 
 def create_logger() -> logging.Logger:
-    """Create and return logger object."""
+    """Create and return custom logger object.
+    The logger is set t DEBUG level
+    a console handler with level set to INFO
+    and a file handler set to DEBUG level logging to a file ass_3.log opened on write mode
+     are added to the logger.
+    Both hanlers have custom formatting"""
+
+    #logger can also be created by reading from file (teacher's feedback)
+    #with open(RESOURCES / "ass3_log_conf.json") as file:
+        #logging.config.dictConfig(json.load(file))
+        #return logging.getLogger('ass_3_logger')
     logger = logging.getLogger("ass_3_logger")
     logger.setLevel(logging.DEBUG)
 
@@ -50,7 +60,14 @@ def create_logger() -> logging.Logger:
 
 
 def measurements_decorator(func):
-    """Function decorator, used for time measurements."""
+    """Function decorator, used for time measurements.
+    The decorator makes use of a wrapper that starts a timer and
+    log a message to logger at INFO level at the beginning of the measurement,
+    gets the number nth_nmb from the func parameter list and
+     loops through numbers from the nth_nmb to zero, run func for each of the numbers
+     and store the result in a list,
+      for every fifth iteration, the number and result is logged at debug level.
+      return the time taken for the computation and the list of results as a tuple"""
 
     @wraps(func)
     def wrapper(nth_nmb: int) -> tuple:
@@ -67,6 +84,24 @@ def measurements_decorator(func):
         return duration, result
     return wrapper
 
+
+
+"""Better approach from feedback
+def measurements_decorator(func):
+  #Function decorator, used for time measurements.
+  @wraps(func)
+  def wrapper(nth_nmb: int) -> tuple:
+    values = list()
+    start = timer()
+    LOGGER.info("Starting measurements...{}".format(func.__name__))
+    for counter, nmb in enumerate(range(nth_nmb, -1, -1)):
+      value = func(nmb)
+      if counter % 5 == 0:
+        LOGGER.debug("{}: {}".format(nmb, value))
+      values.append(value)
+    duration = timer() - start
+    return duration, values
+  return wrapper"""
 
 @measurements_decorator
 def fibonacci_iterative(nth_nmb: int) -> int:
@@ -96,7 +131,11 @@ memory = {0: 0, 1: 1}
 
 @measurements_decorator
 def fibonacci_memory(nth_nmb: int) -> int:
-    """An recursive approach to find Fibonacci sequence value, storing those already calculated."""
+    """Computes Fibonacci value using recursive method. Has a dictionary to which call
+    computed fibonacci value computed are store in as number:fib value.
+    Check if fibonacci value has already been computed and stored to dictionary,
+     if found in list use value, if not found compute value and store in in dictionary.
+     return the fibonacci value."""
 
     def fib_memory(n):
         if n in memory:
@@ -123,7 +162,9 @@ def duration_format(duration: float, precision: str) -> str:
 
 
 def print_statistics(fib_details: dict, nth_value: int):
-    """Function which handles printing to console."""
+    """Function which handles printing to console.
+    formats printout and prints computation time for the different methods in
+    seconds, milliseconds, microseconds and nanoseconds with header"""
     line = '\n' + ("---------------" * 5)
     print_title = "DURATION FOR EACH APPROACH WITHIN INTERVAL: " + str(nth_value) + "-0"
     print("{:<75}\n{:^75}{:<75}".format(line, print_title, line))
@@ -139,23 +180,18 @@ def print_statistics(fib_details: dict, nth_value: int):
 
 
 def write_to_file(fib_details: dict):
-    """Function to write information to file."""
-    for key in fib_details:
-        stem = key.replace(" ", "_")
-        path = stem + ".txt"
-        new_file = RESOURCES / path
-        result = fib_details[key]
-        duration = result[0]
-        fib_values = result[1]
-        count = len(fib_values) -1
-        try:
-            with open(new_file, 'w') as file:
-                for val in fib_values:
-                    line = str(count) + ", " + str(val)
-                    file.write("{}: {}\n".format(count, val))
-                    count -= 1
-        except FileExistsError:
-            print("File already exist!")
+    """Function to write information to file.
+    for each fibonacci method and sequence values list pair,
+    create and open a file on write mode with the where the
+    filename is the method name with space replace with '_' and .txt extension added
+     zip list of numbers from the length of the list -1 down to zero, to the list of fibonacci values,
+      write each zipped pair to a new lin in the file with a space after ':'"""
+
+    for fib_type, details in fib_details.items():
+        file_path = RESOURCES / "{}.txt".format(fib_type.replace(" ", "_"))
+        with open(file_path, 'w') as file:
+            for idx, value in zip(range(len(details[1]) - 1, -1, -1), details[1]):
+                file.write("{}: {}\n".format(idx, value))
 
 
 def main():
