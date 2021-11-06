@@ -27,63 +27,64 @@ RESOURCES = Path(__file__).parent / "../_Resources/"
 
 
 def create_logger() -> logging.Logger:
-    """Create and return custom logger object.
-    The logger is set t DEBUG level
-    a console handler with level set to INFO
-    and a file handler set to DEBUG level logging to a file ass_3.log opened on write mode
-     are added to the logger.
-    Both hanlers have custom formatting"""
+    """Create and return custom logger object."""
 
     #logger can also be created by reading from file (teacher's feedback)
     #with open(RESOURCES / "ass3_log_conf.json") as file:
         #logging.config.dictConfig(json.load(file))
         #return logging.getLogger('ass_3_logger')
+
+
+    #Create logger named ass_3_logger and set to DEBUG level
     logger = logging.getLogger("ass_3_logger")
     logger.setLevel(logging.DEBUG)
 
+    # Create console handler and set to INFO level
     console_handler = logging.StreamHandler(sys.stdout)
     console_handler.setLevel(logging.INFO)
 
+    # Create file handler that log to file 'ass_3.log opened in write more and set to DEBUG level
     log_path = RESOURCES / "ass_3.log"
     file_handler = logging.FileHandler(log_path, mode="w")
     file_handler.setLevel(logging.DEBUG)
 
+    #Set logging formatting style for handlers
     console_format = logging.Formatter("%(levelname)s | %(message)s")
     file_format = logging.Formatter('%(asctime)s | %(name)s | %(levelname)s | %(message)s',
                                     datefmt='%Y-%m-%d %H:%M:%S')
     console_handler.setFormatter(console_format)
     file_handler.setFormatter(file_format)
 
+    # Add handlers to logger
     logger.addHandler(console_handler)
     logger.addHandler(file_handler)
     return logger
 
 
 def measurements_decorator(func):
-    """Function decorator, used for time measurements.
-    The decorator makes use of a wrapper that starts a timer and
-    log a message to logger at INFO level at the beginning of the measurement,
-    gets the number nth_nmb from the func parameter list and
-     loops through numbers from the nth_nmb to zero, run func for each of the numbers
-     and store the result in a list,
-      for every fifth iteration, the number and result is logged at debug level.
-      return the time taken for the computation and the list of results as a tuple"""
-
+    """Function decorator, used for time measurements."""
+    #wrapper gets the number nth_nmb from the func parameter list
     @wraps(func)
     def wrapper(nth_nmb: int) -> tuple:
         result = list()
+        #get time at which measurement starts
         start_time = timer()
+        #log a message to logger at INFO level at the beginning of the measurement,
         LOGGER.info("Starting measurements...{}".format(func.__name__))
         counter = 0
+        #loops through numbers from the nth_nmb to zero
         for nth_nmb in range(nth_nmb, -1, -1):
+            #run func for each of the numbers and store the result in a list
             result.append(func(nth_nmb))
+            #check if number of iteration is divisible by 5. if yes logg number and value at DEBUG level
             if counter % 5 == 0:
                 LOGGER.debug("{}: {}".format(nth_nmb, result[counter]))
             counter += 1
+        #Compute duration by subtracting start time form current time
         duration = timer() - start_time
+        #return the time taken for the computation and the list of results as a tuple
         return duration, result
     return wrapper
-
 
 
 """Better approach from feedback
@@ -102,6 +103,7 @@ def measurements_decorator(func):
     duration = timer() - start
     return duration, values
   return wrapper"""
+
 
 @measurements_decorator
 def fibonacci_iterative(nth_nmb: int) -> int:
@@ -126,21 +128,22 @@ def fibonacci_recursive(nth_nmb: int) -> int:
     return fib(nth_nmb)
 
 
-memory = {0: 0, 1: 1}
-
-
 @measurements_decorator
 def fibonacci_memory(nth_nmb: int) -> int:
-    """Computes Fibonacci value using recursive method. Has a dictionary to which call
-    computed fibonacci value computed are store in as number:fib value.
-    Check if fibonacci value has already been computed and stored to dictionary,
-     if found in list use value, if not found compute value and store in in dictionary.
-     return the fibonacci value."""
+    """Computes Fibonacci value using recursive method. """
+    #Dictionary storing all number and computed fib value
+    memory = {0: 0, 1: 1}
 
     def fib_memory(n):
-        if n in memory:
-            return memory[n]
-        memory[n] = fib_memory(n - 1) + fib_memory(n - 2)
+        #check if n is not found in memory
+        if n not in memory:
+            #the length of memory is equal to the last stored number + 1,
+            # which is the next number to be computed
+            n_index = len(memory)
+            #compute fib value of the next value by adding the last 2 fib values in memory
+            memory[n_index] = memory[n_index - 1] + memory[n_index - 2]
+            #This line will keep calling recursively untill fib value of n is found in memory
+            fib_memory(n)
         return memory[n]
 
     return fib_memory(nth_nmb)
@@ -162,34 +165,35 @@ def duration_format(duration: float, precision: str) -> str:
 
 
 def print_statistics(fib_details: dict, nth_value: int):
-    """Function which handles printing to console.
-    formats printout and prints computation time for the different methods in
-    seconds, milliseconds, microseconds and nanoseconds with header"""
+    """Function which handles printing to console."""
     line = '\n' + ("---------------" * 5)
     print_title = "DURATION FOR EACH APPROACH WITHIN INTERVAL: " + str(nth_value) + "-0"
-    print("{:<75}\n{:^75}{:<75}".format(line, print_title, line))
-    print("{:<15}  {:>15}  {:>15}  {:>15}  {:>15}".format("", "Seconds", "Milliseconds", "Microseconds",
-                                                          "Nanoseconds"))
-    for key in fib_details:
-        results = fib_details[key]
-        duration = results[0]
-        print("{:<15}  {:>15}  {:>15}  {:>15}  {:>15}".format(key.title(), duration_format(duration, "Seconds"),
-                                                              duration_format(duration, "Milliseconds"),
-                                                              duration_format(duration, "Microseconds"),
-                                                              duration_format(duration, "Nanoseconds")))
+    #collection of heading to be used for the printout
+    precisions = ("Seconds", "Milliseconds", "Microseconds", "Nanoseconds")
+    #Get column with for print out by add 2 to the length of the longest column heading
+    col_width = max(len(word) for word in precisions) + 2
+    #print headings with the above coloun with with the first column having no heading and
+    #for each heading in precision
+    print("{:<{width}} {:>{width}} {:>{width}} {:>{width}} {:>{width}}".
+          format("", *precisions, width=col_width))
+    #For each method pint duration of measurement in seconds, millisecond, microseconds, nanoseconds
+    for fib_type, details in fib_details.items():
+        row = "{:<{width}}".format(fib_type.title(), width=col_width)
+        duration = details[0]
+        for precision in precisions:
+            row += "{:>{width}}".format(duration_format(duration, precision), width=col_width + 1)
 
 
 def write_to_file(fib_details: dict):
-    """Function to write information to file.
-    for each fibonacci method and sequence values list pair,
-    create and open a file on write mode with the where the
-    filename is the method name with space replace with '_' and .txt extension added
-     zip list of numbers from the length of the list -1 down to zero, to the list of fibonacci values,
-      write each zipped pair to a new lin in the file with a space after ':'"""
-
+    """Function to write information to file."""
+    #loop through all fibonacci method and sequence values list pair,
     for fib_type, details in fib_details.items():
+        #create path using filename ss the method name with space replace with '_' and .txt extension added
         file_path = RESOURCES / "{}.txt".format(fib_type.replace(" ", "_"))
+        #Open file in write mode and
         with open(file_path, 'w') as file:
+            #zip list of numbers from the length of the list -1 down to zero, to the list of fibonacci values
+            #write each zipped pair to a new lin in the file with a space after ':'
             for idx, value in zip(range(len(details[1]) - 1, -1, -1), details[1]):
                 file.write("{}: {}\n".format(idx, value))
 
